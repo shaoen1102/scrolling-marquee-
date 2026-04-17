@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全功能互動直播工具平台</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK (Version 9+) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <!-- 1️⃣ 跑馬燈（Marquee）模組 -->
+    <div class="marquee-wrapper" id="marquee-bg">
+        <div class="marquee-content" id="marquee-text">
+            歡迎來到全功能互動工具平台！🚀 這裡有無窮的可能 ✨ 請在下方控制面板自訂您想顯示的內容文字...
+        </div>
+    </div>
+
+    <!-- 2️⃣ 倒數計時器（Timer） -->
+    <div class="timer-section">
+        <i class="fas fa-hourglass-start"></i>
+        <div class="timer-display" id="timer-display">00:00</div>
+        <div id="timer-status" style="font-size: 0.9rem; color: var(--text-dim);">等待啟動...</div>
+    </div>
+
+    <div class="container">
+        <!-- 6️⃣ 左上角 活動標題動畫 -->
+        <div class="title-container">
+            <h1 class="event-title" id="display-title">互動直播活動</h1>
+        </div>
+
+        <div class="main-grid">
+            <!-- 左側主要區域 -->
+            <div class="left-col">
+                <!-- 3️⃣ YouTube 影片播放區 -->
+                <div class="video-card">
+                    <div class="video-container" id="video-wrapper">
+                        <!-- 預設顯示畫面 -->
+                        <div style="display: flex; height: 100%; align-items: center; justify-content: center; background: #111; color: #444;">
+                            <i class="fab fa-youtube" style="font-size: 5rem;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4️⃣ 隨機抽號碼機 -->
+                <div class="generator-section">
+                    <div class="gen-title">
+                        <i class="fas fa-dice" style="color: var(--secondary);"></i>
+                        <span>互動抽獎機</span>
+                    </div>
+                    <div class="numbers-display" id="numbers-result">
+                        <!-- 抽出號碼會顯示在此 -->
+                    </div>
+                    <div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;" id="generator-history">
+                        尚未開始抽獎
+                    </div>
+                </div>
+
+                <!-- 5️⃣ 下方互動區（打賞／按讚） -->
+                <div class="interactions">
+                    <button class="interact-btn" onclick="sendInteraction('likes')">
+                        <span class="btn-icon">❤️</span>
+                        <span class="count-badge" id="count-likes">0</span>
+                    </button>
+                    <button class="interact-btn" onclick="sendInteraction('stars')">
+                        <span class="btn-icon">⭐</span>
+                        <span class="count-badge" id="count-stars">0</span>
+                    </button>
+                    <button class="interact-btn" onclick="sendInteraction('rockets')">
+                        <span class="btn-icon">🚀</span>
+                        <span class="count-badge" id="count-rockets">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右側設定面板 -->
+            <div class="right-col">
+                <div class="controls-card">
+                    <div class="gen-title" style="font-size: 1.2rem;">
+                        <i class="fas fa-cog"></i>
+                        <span>控制中心</span>
+                    </div>
+
+                    <!-- 標題與跑馬燈設定 -->
+                    <div class="control-group">
+                        <label>活動標題</label>
+                        <input type="text" id="input-title" placeholder="輸入課程/活動名稱" oninput="updateTitle()">
+                    </div>
+
+                    <div class="control-group">
+                        <label>跑馬燈內容 (支援 Emoji)</label>
+                        <input type="text" id="input-marquee" placeholder="在此輸入文字..." oninput="updateMarquee()">
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <div class="control-group" style="flex: 1;">
+                            <label>文字顏色</label>
+                            <input type="color" id="input-font-color" value="#ffffff" onchange="updateMarqueeStyle()">
+                        </div>
+                        <div class="control-group" style="flex: 1;">
+                            <label>背景顏色</label>
+                            <input type="color" id="input-bg-color" value="#1e293b" onchange="updateMarqueeStyle()">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>跑馬燈速度 (秒)</label>
+                        <input type="range" id="input-speed" min="5" max="40" value="20" onchange="updateMarqueeStyle()">
+                    </div>
+
+                    <!-- 計時器設定 -->
+                    <hr style="border-color: var(--glass-border); margin: 20px 0;">
+                    <div class="control-group">
+                        <label>計時器 (分:秒)</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="timer-min" placeholder="分" min="0" value="0">
+                            <input type="number" id="timer-sec" placeholder="秒" min="0" max="59" value="0">
+                        </div>
+                        <button onclick="startTimer()" style="margin-top: 10px;">啟動計時器</button>
+                        <button class="secondary" onclick="resetTimer()" style="margin-top: 5px;">重設</button>
+                    </div>
+
+                    <!-- YouTube 設定 -->
+                    <hr style="border-color: var(--glass-border); margin: 20px 0;">
+                    <div class="control-group">
+                        <label>YouTube 網址</label>
+                        <input type="text" id="input-yt-url" placeholder="貼上網址或影片 ID">
+                        <button onclick="updateVideo()" style="margin-top: 10px;">更新影片</button>
+                    </div>
+
+                    <!-- 抽號碼設定 -->
+                    <hr style="border-color: var(--glass-border); margin: 20px 0;">
+                    <div class="control-group">
+                        <label>抽號碼範圍 (開始 - 結束)</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="num-start" value="1">
+                            <input type="number" id="num-end" value="50">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>排除號碼 (逗號隔開)</label>
+                        <input type="text" id="num-exclude" placeholder="例如: 5,12,30">
+                    </div>
+                    <div class="control-group">
+                        <label>抽出個數 ({a, b, c})</label>
+                        <input type="number" id="num-count" value="1" min="1">
+                    </div>
+                    <div class="control-group" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="num-no-repeat" style="width: 20px;" checked>
+                        <label style="margin: 0;">避免重複抽取</label>
+                    </div>
+                    <button onclick="drawNumbers()">開始抽號</button>
+                    <button class="secondary" onclick="clearNumbers()">清除結果</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7️⃣ 主持人資訊（社群連結） -->
+        <div class="social-links">
+            <a href="https://facebook.com" target="_blank" class="social-icon" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://youtube.com" target="_blank" class="social-icon" title="YouTube"><i class="fab fa-youtube"></i></a>
+            <a href="https://instagram.com" target="_blank" class="social-icon" title="Instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+    </div>
+
+    <!-- Notification Sound (Simple beep) -->
+    <audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
